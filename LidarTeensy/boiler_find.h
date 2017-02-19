@@ -10,8 +10,8 @@
 /**
    Constants for alliance
 */
+#define RED_ALLIANCE 0x00
 #define BLUE_ALLIANCE 0x01
-#define RED_ALLIANCE 0x02
 /**
    The angle between the boiler and the operator stations
    This is 135*, or 3pi/4 radians

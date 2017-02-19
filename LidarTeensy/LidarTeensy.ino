@@ -49,8 +49,9 @@ doubly_linked_list_node<line> * line_data_start;
 boiler_location boiler;
 
 // CAN IDs
-#define CAN_LIDAR_ID 0x600
-#define CAN_LIDAR_ENCODER_ID 0x607
+#define MATCH_DATA_ID 0x600
+#define CAN_LIDAR_ID 0x620
+#define CAN_LIDAR_ENCODER_ID 0x621
 
 uint8_t calculation_idx;
 
@@ -91,7 +92,7 @@ void setup() {
   alliance = 0;
   min_angle = 0;
   max_angle = 0;
-  CAN_add_id(CAN_LIDAR_ID, &set_alliance);
+  CAN_add_id(MATCH_DATA_ID, &set_alliance);
 }
 
 void writeLongs(uint32_t id, long value1, long value2) {
@@ -119,9 +120,9 @@ void loop() {
       calculation_idx = 1; // Start calculation
     }
   }
-  
+
   // CAN send
-  if (last_can_loop > 1) {
+  if (last_can_loop > 1) { // Only send CAN data every 10ms, loop runs at 5ms (for serial read)
     writeLongs(CAN_LIDAR_ID, boiler.delta_x, boiler.delta_y);
     writeLongs(CAN_LIDAR_ENCODER_ID, 0, lidar_speed);
     last_can_loop = 0;
