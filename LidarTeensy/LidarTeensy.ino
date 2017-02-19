@@ -73,6 +73,7 @@ void set_alliance(byte * msg) {
 void try_load_next_bytes();
 void packet_to_array();
 void load_linked_list();
+void serial_lidar_log();
 
 void setup() {
   CAN_begin();
@@ -200,82 +201,7 @@ void loop() {
   }
 #endif
 
-  // Logging
-  if (Serial.available()) {
-    char request = Serial.read();
-    if (request == '0') {
-      Serial.println(lidar_speed);
-      Serial.print("#");
-    }
-    else if (request == '1') {
-      for (uint16_t i = 0; i < 360; i++) {
-        if (i < min_angle || i > max_angle) {
-          if (distances[i] != 0) {
-            for (uint8_t j = 1; j < 3; j++) {
-              if (i < pow(10, j)) Serial.print("0");
-            }
-            Serial.print(i);
-            Serial.print(",");
-            for (uint8_t j = 1; j < 4; j++) {
-              if (distances[i] < pow(10, j)) Serial.print("0");
-            }
-            Serial.println(distances[i]);
-            delayMicroseconds(2);
-          }
-        }
-      }
-      Serial.print("#");
-    }
-    else if (request == '2' && line_data_start != NULL) {
-      doubly_linked_list_node<line> * node = line_data_start->next;
-      bool finished = false;
-
-      while (node != line_data_start && !finished) {
-        for (uint8_t j = 1; j < 3; j++) {
-          if (node->data->start_x < pow(10, j)) Serial.print("0");
-        }
-        Serial.print(node->data->start_x);
-        Serial.print(",");
-        for (uint8_t j = 1; j < 3; j++) {
-          if (node->data->start_y < pow(10, j)) Serial.print("0");
-        }
-        Serial.print(node->data->start_y);
-        Serial.print(",");
-        for (uint8_t j = 1; j < 3; j++) {
-          if (node->data->end_x < pow(10, j)) Serial.print("0");
-        }
-        Serial.print(node->data->end_x);
-        Serial.print(",");
-        for (uint8_t j = 1; j < 3; j++) {
-          if (node->data->end_y < pow(10, j)) Serial.print("0");
-        }
-        Serial.print(node->data->end_y);
-        Serial.print(",");
-        delayMicroseconds(2);
-        if (node == line_data_start->prev) {
-          finished = true;
-        }
-        node = node->next;
-      }
-      Serial.print("#");
-    }
-    else if (request == '3') {
-      if (boiler.delta_x < 0) Serial.print("-");
-      else Serial.print("0");
-      for (uint8_t j = 1; j < 4; j++) {
-        if (abs(boiler.delta_x) < pow(10, j)) Serial.print("0");
-      }
-      Serial.print(abs(boiler.delta_x));
-      Serial.print(",");
-      if (boiler.delta_y < 0) Serial.print("-");
-      else Serial.print("0");
-      for (uint8_t j = 1; j < 4; j++) {
-        if (abs(boiler.delta_y) < pow(10, j)) Serial.print("0");
-      }
-      Serial.println(abs(boiler.delta_y));
-      Serial.print("#");
-    }
-  }
+  serial_lidar_log();
 
   if (micros() - loopStart < LOOP_TIME) {
     delayMicroseconds(LOOP_TIME - (micros() - loopStart));
@@ -375,6 +301,87 @@ void load_linked_list() {
   }
   else {
     lidar_data_start = NULL;
+  }
+}
+
+/**
+  Code for LiDAR logging
+*/
+void serial_lidar_log() {
+  if (Serial.available()) {
+    char request = Serial.read();
+    if (request == '0') {
+      Serial.println(lidar_speed);
+      Serial.print("#");
+    }
+    else if (request == '1') {
+      for (uint16_t i = 0; i < 360; i++) {
+        if (i < min_angle || i > max_angle) {
+          if (distances[i] != 0) {
+            for (uint8_t j = 1; j < 3; j++) {
+              if (i < pow(10, j)) Serial.print("0");
+            }
+            Serial.print(i);
+            Serial.print(",");
+            for (uint8_t j = 1; j < 4; j++) {
+              if (distances[i] < pow(10, j)) Serial.print("0");
+            }
+            Serial.println(distances[i]);
+            delayMicroseconds(2);
+          }
+        }
+      }
+      Serial.print("#");
+    }
+    else if (request == '2' && line_data_start != NULL) {
+      doubly_linked_list_node<line> * node = line_data_start->next;
+      bool finished = false;
+
+      while (node != line_data_start && !finished) {
+        for (uint8_t j = 1; j < 3; j++) {
+          if (node->data->start_x < pow(10, j)) Serial.print("0");
+        }
+        Serial.print(node->data->start_x);
+        Serial.print(",");
+        for (uint8_t j = 1; j < 3; j++) {
+          if (node->data->start_y < pow(10, j)) Serial.print("0");
+        }
+        Serial.print(node->data->start_y);
+        Serial.print(",");
+        for (uint8_t j = 1; j < 3; j++) {
+          if (node->data->end_x < pow(10, j)) Serial.print("0");
+        }
+        Serial.print(node->data->end_x);
+        Serial.print(",");
+        for (uint8_t j = 1; j < 3; j++) {
+          if (node->data->end_y < pow(10, j)) Serial.print("0");
+        }
+        Serial.print(node->data->end_y);
+        Serial.print(",");
+        delayMicroseconds(2);
+        if (node == line_data_start->prev) {
+          finished = true;
+        }
+        node = node->next;
+      }
+      Serial.print("#");
+    }
+    else if (request == '3') {
+      if (boiler.delta_x < 0) Serial.print("-");
+      else Serial.print("0");
+      for (uint8_t j = 1; j < 4; j++) {
+        if (abs(boiler.delta_x) < pow(10, j)) Serial.print("0");
+      }
+      Serial.print(abs(boiler.delta_x));
+      Serial.print(",");
+      if (boiler.delta_y < 0) Serial.print("-");
+      else Serial.print("0");
+      for (uint8_t j = 1; j < 4; j++) {
+        if (abs(boiler.delta_y) < pow(10, j)) Serial.print("0");
+      }
+      Serial.println(abs(boiler.delta_y));
+      Serial.print("#");
+    }
   }
 }
 
