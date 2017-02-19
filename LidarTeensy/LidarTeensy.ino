@@ -70,9 +70,9 @@ void set_alliance(byte * msg) {
   }
 }
 
-void try_load_next_bytes();
-void packet_to_array();
-void load_linked_list();
+void try_load_next_lidar_bytes();
+void lidar_packet_to_array();
+void load_lidar_linked_list();
 void serial_lidar_log();
 
 void setup() {
@@ -114,7 +114,7 @@ void writeLongs(uint32_t id, long value1, long value2) {
 void loop() {
   long loopStart = micros();
 
-  try_load_next_bytes();
+  try_load_next_lidar_bytes();
 
   if (lidar_speed > 180000) {
     if (calculation_idx == 0) {
@@ -134,6 +134,11 @@ void loop() {
   // CAN Receive
   CAN_update();
 
+  /*
+    LiDAR calculation
+    In order to stay under the 5ms limit for serial read, the calculation is split into 10 parts
+    (note that each part, except the line finder, is much less than 5ms)
+  */
 #ifdef TIME
   long timing_start = micros();
   if (calculation_idx != 0) {
@@ -147,7 +152,7 @@ void loop() {
     calculation_idx++;
   }
   else if (calculation_idx == 2) {
-    load_linked_list();
+    load_lidar_linked_list();
     if (lidar_data_start == NULL) {
       calculation_idx = 0;
     }
@@ -216,7 +221,7 @@ void loop() {
    Attempt to load the next byte from the LIDAR Serial
    into the packet array
 */
-void try_load_next_bytes() {
+void try_load_next_lidar_bytes() {
   while (Serial1.available()) {
     last_lidar_data = micros();
     uint8_t b = Serial1.read();
@@ -231,7 +236,7 @@ void try_load_next_bytes() {
       current_packet[subpacket_idx] = b;
       if (subpacket_idx == 21) {
         start = false;
-        packet_to_array();
+        lidar_packet_to_array();
       }
     }
   }
@@ -240,7 +245,7 @@ void try_load_next_bytes() {
 /**
    Update the distance array with the latest packet
 */
-void packet_to_array() {
+void lidar_packet_to_array() {
   uint8_t index = current_packet[1] - 0xA0;
   if (index != last_idx) {
     bool error = false;
@@ -268,7 +273,7 @@ void packet_to_array() {
 /**
    Transfer the distance array into
 */
-void load_linked_list() {
+void load_lidar_linked_list() {
   doubly_linked_list_node<lidar_datapoint> * previous_node = NULL;
   for (int i = 0; i < 360; i++) {
     if (i < min_angle || i > max_angle) {
