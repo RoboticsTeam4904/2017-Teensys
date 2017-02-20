@@ -87,8 +87,8 @@ void setup() {
   line_data_start = NULL;
   calculation_idx = 0;
   lidar_speed = 0;
-  boiler.delta_x = 0;
-  boiler.delta_y = 0;
+  boiler.theta = 0;
+  boiler.distance = 0;
   last_can_loop = 0;
   alliance = 0;
   min_angle = 0;
@@ -124,7 +124,7 @@ void loop() {
 
   // CAN send
   if (last_can_loop > 1) { // Only send CAN data every 10ms, loop runs at 5ms (for serial read)
-    writeLongs(CAN_LIDAR_ID, boiler.delta_x, boiler.delta_y);
+    writeLongs(CAN_LIDAR_ID, boiler.theta, boiler.distance);
     writeLongs(CAN_LIDAR_ENCODER_ID, 0, lidar_speed);
     last_can_loop = 0;
   }
@@ -372,19 +372,19 @@ void serial_lidar_log() {
       Serial.print("#");
     }
     else if (request == '3') {
-      if (boiler.delta_x < 0) Serial.print("-");
+      if (boiler.distance < 10) Serial.print("-");
       else Serial.print("0");
       for (uint8_t j = 1; j < 4; j++) {
-        if (abs(boiler.delta_x) < pow(10, j)) Serial.print("0");
+        if (abs(boiler.theta) < pow(10, j)) Serial.print("0");
       }
-      Serial.print(abs(boiler.delta_x));
+      Serial.print(abs(boiler.theta));
       Serial.print(",");
-      if (boiler.delta_y < 0) Serial.print("-");
+      if (boiler.distance < 0) Serial.print("-");
       else Serial.print("0");
       for (uint8_t j = 1; j < 4; j++) {
-        if (abs(boiler.delta_y) < pow(10, j)) Serial.print("0");
+        if (abs(boiler.distance) < pow(10, j)) Serial.print("0");
       }
-      Serial.println(abs(boiler.delta_y));
+      Serial.println(abs(boiler.distance));
       Serial.print("#");
     }
   }

@@ -31,6 +31,12 @@
  */
 #define BOILER_WIDTH 1066.8
 #define BOILER_DEPTH 456.18
+/**
+ Shooter location adjustments relative to LiDAR
+ All dimensions in millimetres
+ */
+#define LIDAR_SHOOTER_OFFSET_X 292.61
+#define LIDAR_SHOOTER_OFFSET_Y 401.07
 
 /**
    Calculate the location of the boiler based on line data.
