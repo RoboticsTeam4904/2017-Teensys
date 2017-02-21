@@ -7,6 +7,8 @@
 
 #define PIN 12
 
+
+
 // Parameter 1 = number of pixels in strip
 // Parameter 2 = Arduino pin number (most are valid)
 // Parameter 3 = pixel type flags, add together as needed:
@@ -23,6 +25,8 @@ int flashdelay = 160;
 int autonmode;
 int mode;
 int flywheelSpeed;
+int encoderLow;
+int encoderHigh;
 int flywheelThresholdLow = 8;
 int flywheelThresholdHigh = 3;
 int flywheelThresholdMax = 5;
@@ -36,6 +40,7 @@ void setup() {
   autonmode = 1;
   Serial.setTimeout(5);
   CAN_add_id(0x600, &changeLEDs);
+  CAN_add_id(0x02041480, &flywheel);
   CAN_begin();
   delay(1000);
   Serial.println("Teensy 3.X CAN Encoder");
@@ -210,4 +215,12 @@ void changeLEDs(byte* msg) {
   Serial.print(" Color: ");
   Serial.println(teamColor);
 }
+
+void flywheel(byte* msg) {
+  encoderHigh = msg[4];
+  encoderLow = msg[5];
+  Serial.print(encoderHigh);
+  Serial.print(encoderLow);
+}
+
 
