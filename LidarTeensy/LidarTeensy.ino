@@ -1,3 +1,5 @@
+
+#include <Encoder.h>
 #include <FlexCAN.h>
 #include <TeensyCANBase.h>
 
@@ -55,6 +57,40 @@ boiler_location boiler;
 
 uint8_t calculation_idx;
 
+void try_load_next_lidar_bytes();
+void lidar_packet_to_array();
+void load_lidar_linked_list();
+void serial_lidar_log();
+
+struct encoderData {
+  long lastRead;
+  long position;
+  long rate;
+  Encoder* enc;
+  uint32_t canID;
+};
+
+encoderData leftEncoderData;
+encoderData rightEncoderData;
+
+void resetLeftEncoder(byte * msg) {
+  if (msg[0] == 0x72 && msg[1] == 0x65 && msg[2] == 0x73 && msg[3] == 0x65 && msg[4] == 0x74 && msg[5] == 0x65 && msg[6] == 0x6e && msg[7] == 0x63) {
+    leftEncoderData.enc->write(0);
+    leftEncoderData.position = 0;
+    leftEncoderData.rate = 0;
+    Serial.println("reset");
+  }
+}
+
+void resetRightEncoder(byte * msg) {
+  if (msg[0] == 0x72 && msg[1] == 0x65 && msg[2] == 0x73 && msg[3] == 0x65 && msg[4] == 0x74 && msg[5] == 0x65 && msg[6] == 0x6e && msg[7] == 0x63) {
+    rightEncoderData.enc->write(0);
+    rightEncoderData.position = 0;
+    rightEncoderData.rate = 0;
+    Serial.println("reset");
+  }
+}
+
 /**
   Set alliance (red/blue)
 */
@@ -70,13 +106,7 @@ void set_alliance(byte * msg) {
   }
 }
 
-void try_load_next_lidar_bytes();
-void lidar_packet_to_array();
-void load_lidar_linked_list();
-void serial_lidar_log();
-
 void setup() {
-  CAN_begin();
   Serial.begin(115200);
   Serial1.begin(115200);
   delay(1000); // wait for serial to load
@@ -94,6 +124,22 @@ void setup() {
   min_angle = 0;
   max_angle = 0;
   CAN_add_id(MATCH_DATA_ID, &set_alliance);
+  pinMode(24, OUTPUT);
+  pinMode(25, OUTPUT);
+  digitalWrite(24, HIGH);
+  CAN_begin();
+  leftEncoderData.lastRead = 0;
+  leftEncoderData.position = -999;
+  leftEncoderData.rate = 0;
+  leftEncoderData.enc = new Encoder (16, 17);
+  leftEncoderData.canID = 0x610;
+  CAN_add_id(0x610, &resetLeftEncoder);
+  rightEncoderData.lastRead = 0;
+  rightEncoderData.position = -999;
+  rightEncoderData.rate = 0;
+  rightEncoderData.enc = new Encoder (18, 19);
+  rightEncoderData.canID = 0x611;
+  CAN_add_id(0x611, &resetRightEncoder);
 }
 
 void writeLongs(uint32_t id, long value1, long value2) {
@@ -106,9 +152,26 @@ void writeLongs(uint32_t id, long value1, long value2) {
     msg[i + 4] = (value2 >> i * 8) & 0xFF;
   }
 
+  digitalWrite(25, HIGH);
   CAN_write(id, msg);
+  digitalWrite(25, LOW);
 
   delete msg;
+}
+
+void canEncoder(encoderData encData) {
+  long newPos = encData.enc->read();
+  if (newPos != encData.position) {
+    encData.rate = ((double) 1000000.0 * (newPos - encData.position)) / ((double) (micros() - encData.lastRead));
+    encData.position = newPos;
+    encData.lastRead = micros();
+  }
+  else {
+    if ((micros() - encData.lastRead) > 1000) {
+      encData.rate = 0;
+    }
+  }
+  writeLongs (encData.canID, encData.position, encData.rate);
 }
 
 void loop() {
@@ -126,6 +189,8 @@ void loop() {
   if (last_can_loop > 1) { // Only send CAN data every 10ms, loop runs at 5ms (for serial read)
     writeLongs(CAN_LIDAR_ID, boiler.theta, boiler.distance);
     writeLongs(CAN_LIDAR_ENCODER_ID, 0, lidar_speed);
+    canEncoder (leftEncoderData);
+    canEncoder (rightEncoderData);
     last_can_loop = 0;
   }
   else {
@@ -389,4 +454,3 @@ void serial_lidar_log() {
     }
   }
 }
-
