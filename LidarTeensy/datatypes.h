@@ -19,8 +19,8 @@ struct line {
 };
 
 struct boiler_location {
-  int16_t theta;
-  uint16_t distance;
+  int16_t x;
+  int16_t y;
 };
 
 

@@ -42,8 +42,8 @@ boiler_location get_boiler(doubly_linked_list_node<line> * line_data_start, uint
   doubly_linked_list_node<line> * node = line_data_start;
 
   boiler_location location;
-  location.theta = 0;
-  location.distance = 0;
+  location.x = 0;
+  location.y = 0;
   bool finished = false;
 
   while (!finished) {
@@ -66,10 +66,8 @@ boiler_location get_boiler(doubly_linked_list_node<line> * line_data_start, uint
           float sin_val = sin(angle1);
           delta_x += cos_val * BOILER_WIDTH / 2.0f;
           delta_y += sin_val * BOILER_WIDTH / 2.0f;
-          delta_x += -sin_val * BOILER_DEPTH;
-          delta_y += cos_val * BOILER_DEPTH;
           // Delta to shooter
-          delta_x -= LIDAR_SHOOTER_OFFSET_X;
+          delta_x -= LIDAR_CENTER_OFFSET_X;
         }
         else if (alliance == RED_ALLIANCE) {
           // Delta to center of boiler
@@ -79,19 +77,15 @@ boiler_location get_boiler(doubly_linked_list_node<line> * line_data_start, uint
           float sin_val = sin(angle2);
           delta_x += -cos_val * BOILER_WIDTH / 2.0f;
           delta_y += -sin_val * BOILER_WIDTH / 2.0f;
-          delta_x += -sin_val * BOILER_DEPTH;
-          delta_y += cos_val * BOILER_DEPTH;
           // Delta to shooter
-          delta_x += LIDAR_SHOOTER_OFFSET_X;
+          delta_x += LIDAR_CENTER_OFFSET_X;
         }
         else {
           break;
         }
 
-        delta_y += LIDAR_SHOOTER_OFFSET_Y;
-
-        location.theta = atan2(delta_y, delta_x);
-        location.distance = sqrt(delta_x * delta_x + delta_y * delta_y);
+        location.x = delta_x;
+        location.y = delta_y;
 
         break;
       }
