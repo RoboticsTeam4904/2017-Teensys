@@ -36,7 +36,8 @@
  All dimensions in millimetres
  */
 #define LIDAR_CENTER_OFFSET_X 292.61
-#define LIDAR_CENTER_OFFSET_Y 401.07
+#define LIDAR_CENTER_OFFSET_Y 508
+#define ROBOT_TURN_DISTANCE 1346
 
 /**
    Calculate the location of the boiler based on line data.

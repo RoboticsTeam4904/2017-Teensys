@@ -19,8 +19,9 @@ struct line {
 };
 
 struct boiler_location {
-  int16_t x;
-  int16_t y;
+  int16_t center_angle;
+  int16_t center_dist;
+  int16_t boiler_angle;
 };
 
 

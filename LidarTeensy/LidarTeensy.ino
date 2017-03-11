@@ -52,7 +52,8 @@ boiler_location boiler;
 
 // CAN IDs
 #define MATCH_DATA_ID 0x600
-#define CAN_LIDAR_ID 0x620
+#define CAN_LIDAR_PHASE1_ID 0x620
+#define CAN_LIDAR_PHASE2_ID 0x622
 #define CAN_LIDAR_ENCODER_ID 0x621
 
 uint8_t calculation_idx;
@@ -194,7 +195,23 @@ void loop() {
 
   // CAN send
   if (last_can_loop > 1) { // Only send CAN data every 10ms, loop runs at 5ms (for serial read)
-    writeLongs(CAN_LIDAR_ID, boiler.x, boiler.y);
+    writeLongs(CAN_LIDAR_PHASE1_ID, boiler.center_angle, boiler.center_dist);
+    uint16_t front_distance = 0;
+    uint8_t count = 0;
+    for(uint16_t i = 358; i < 360; i++){
+      if(distances[i] != 0){
+        front_distance += distances[i];
+        count++;
+      }
+    }
+    for(uint16_t i = 0; i < 2; i++){
+      if(distances[i] != 0){
+        front_distance += distances[i];
+        count++;
+      }
+    }
+    front_distance = front_distance / count; // +- 1mm is small enough that we do not care
+    writeLongs(CAN_LIDAR_PHASE2_ID, boiler.angle, front_distance);
     writeLongs(CAN_LIDAR_ENCODER_ID, 0, lidar_speed);
     last_can_loop = 0;
   }
