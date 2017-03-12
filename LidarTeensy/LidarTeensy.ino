@@ -116,8 +116,9 @@ void setup() {
   line_data_start = NULL;
   calculation_idx = 0;
   lidar_speed = 0;
-  boiler.x = 0;
-  boiler.y = 0;
+  boiler.center_dist = 0;
+  boiler.center_angle = 0;
+  boiler.boiler_angle = 0;
   last_can_loop = 0;
   alliance = 0;
   min_angle = 0;
@@ -211,7 +212,7 @@ void loop() {
       }
     }
     front_distance = front_distance / count; // +- 1mm is small enough that we do not care
-    writeLongs(CAN_LIDAR_PHASE2_ID, boiler.angle, front_distance);
+    writeLongs(CAN_LIDAR_PHASE2_ID, boiler.boiler_angle, front_distance);
     writeLongs(CAN_LIDAR_ENCODER_ID, 0, lidar_speed);
     last_can_loop = 0;
   }
@@ -459,9 +460,11 @@ void serial_lidar_log() {
       Serial.print("#");
     }
     else if (request == '3') {
-      Serial.print(boiler.x);
+      Serial.print(boiler.center_angle);
       Serial.print(",");
-      Serial.println(boiler.y);
+      Serial.println(boiler.center_dist);
+      Serial.print(",");
+      Serial.println(boiler.boiler_angle);
       Serial.print("#");
     }
   }
