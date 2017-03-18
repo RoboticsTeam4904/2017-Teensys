@@ -19,10 +19,8 @@
 //   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(87, PIN, NEO_GRB + NEO_KHZ800);
 
-int status;
 int teamColor;
 int flashdelay = 160;
-int autonmode;
 int mode;
 int flywheelSpeed;
 int encoderLow;
@@ -35,13 +33,11 @@ void setup() {
   Serial.begin(9600);
 
   strip.begin();
-  status = 1;
   teamColor = 1;
-  autonmode = 1;
   mode = 0;
   Serial.setTimeout(5);
   CAN_add_id(0x600, &changeLEDs);
-  CAN_add_id(0x02041480, &flywheel);
+  CAN_add_id(0x02041480 | 6, &flywheel);
   CAN_begin();
   pinMode(9, OUTPUT);
   digitalWrite(9, HIGH);
@@ -52,86 +48,12 @@ void setup() {
 void loop() {
   CAN_update();
 
-  if (mode == 0) { //disabled
-    status = 5;
+  if(mode == 0){ // Disabled
+    rainbow(10);
   }
-
-  if (mode == 2) { //enabled
-    status = 1;
+  else {
+    colorFull(strip.Color(255 - teamColor*255, 0, teamColor*255));
   }
-
-  if (mode == 3) { //flywheel on
-    if (flywheelSpeed < flywheelThresholdLow) {
-      status = 2;
-    } else if (flywheelSpeed > flywheelThresholdLow && flywheelSpeed < flywheelThresholdHigh) {
-      status = 3;
-    } else if (flywheelSpeed > flywheelThresholdHigh && flywheelSpeed < flywheelThresholdMax) {
-      status = 4;
-    } else {
-      status = 7;
-    }
-
-  }
-
-  if (mode == 1) { //autonomous period
-    status = 6;
-  }
-  switch (status) {
-
-
-    case 1: //team color
-
-      if (teamColor == 0) {
-        colorFull(strip.Color(255, 0, 0));
-      } else {
-        colorFull(strip.Color(0, 0, 255));
-      }
-      break;
-
-    case 2:
-      colorFull(strip.Color(255, 0, 0));
-      break;
-
-    case 3:
-      colorFull(strip.Color(247, 106, 0));
-      break;
-
-    case 4:
-
-      if (millis() % 500 > 250) {
-        colorFull(strip.Color(0, 255, 0));
-      } else {
-        colorFull(strip.Color(0, 0, 0));
-      }
-      break;
-
-    case 5:
-      rainbowCycle(10);
-      break;
-    case 6:
-
-      if (autonmode == 0) {
-        colorFull(strip.Color(255, 0, 255));
-      } else {
-        colorFull(strip.Color(255, 50, 0));
-      }
-      break;
-
-    case 7:
-
-      if (millis() % 500 > 250) {
-        if (teamColor == 0) {
-          colorFull(strip.Color(255, 0, 0));
-        } else {
-          colorFull(strip.Color(0, 0, 255));
-        }
-      } else {
-        colorFull(strip.Color(0, 0, 0));
-      }
-      break;
-  }
-  //status = 4;
-  Serial.println(status);
   delay(10);
 }
 
@@ -203,24 +125,24 @@ uint32_t Wheel(byte WheelPos) {
 
 void changeLEDs(byte* msg) {
   mode = msg[2];
-  autonmode = msg[1];
   teamColor = msg[0];
-  flywheelSpeed = msg[3] + (msg[4] << 8);
   
   Serial.print(millis());
   Serial.print(" Mode: ");
   Serial.print(mode);
-  Serial.print(" Auto: ");
-  Serial.print(autonmode);
   Serial.print(" Color: ");
   Serial.println(teamColor);
 }
 
+// For reference,
+// https://github.com/wpilibsuite/allwpilib/blob/99b2b65148e7ea4b49d06f31bde5cd09b4f25119/hal/lib/Athena/ctre/CanTalonSRX.cpp
 void flywheel(byte* msg) {
   encoderHigh = msg[4];
   encoderLow = msg[5];
-  Serial.print(encoderHigh);
-  Serial.print(encoderLow);
+  flywheelSpeed = (encoderHigh << 8) | encoderLow;
+  flywheelSpeed <<= 16; // Apparently this does a sign extend
+  flywheelSpeed >>= 16;
+  Serial.print(flywheelSpeed);
 }
 
 
