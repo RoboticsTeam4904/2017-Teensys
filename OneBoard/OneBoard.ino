@@ -6,7 +6,7 @@
 #include <FlexCAN.h>
 #include <TeensyCANBase.h>
 
-#define LED_STRIP_PIN 1
+#define LED_STRIP_PIN 0
 #define POWER_LED_PIN 25
 
 Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(87, LED_STRIP_PIN, NEO_GRB + NEO_KHZ800);
