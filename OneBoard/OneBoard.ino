@@ -13,6 +13,9 @@ Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(87, LED_STRIP_PIN, NEO_GRB + NEO_
 
 int ledTeamColor;
 int ledMatchState;
+int ledTheatreStage;
+const int ledTheatreWidth = 3;
+const int ledTheatreSpeedScale = 2048;
 
 struct encoderData {
   long lastRead;
@@ -43,12 +46,13 @@ void resetRightEncoder(byte * msg) {
   }
 }
 
-void setup(){
+void setup() {
   Serial.begin(9600); // Begin debugging serial
   ledStrip.begin();
   CAN_begin();
   ledTeamColor = 1; // default to blue
   ledMatchState = 0; // default to disabled
+  ledTheatreStage = 0;
   CAN_add_id(0x600, &changeLEDs); // MatchInformer callback
   leftData.lastRead = 0;
   leftData.pos = -999;
@@ -79,21 +83,24 @@ void writeLongs(uint32_t id, long value1, long value2) {
   delete msg;
 }
 
-void loop(){
+void loop() {
   CAN_update();
 
   // LED strip code
-  if(ledMatchState == 0){
+  if (ledMatchState == 0) {
     rainbow(10);
   }
   else {
-    colorFull(ledStrip.Color(255 - ledTeamColor*255, 0, ledTeamColor*255));
+    colorTheatre(ledStrip.Color(255 - ledTeamColor * 255, 0, ledTeamColor * 255));
   }
 
   // Encoder code
   long newPos = leftEncoder.read();
   if (newPos != leftData.pos) {
     leftData.rate = ((double) 1000000.0 * (newPos - leftData.pos)) / ((double) (micros() - leftData.lastRead));
+    Serial.print("Left: ");
+    Serial.print(leftData.pos);
+    Serial.print(" Rate: ");
     Serial.println(leftData.rate);
     leftData.pos = newPos;
     leftData.lastRead = micros();
@@ -107,6 +114,10 @@ void loop(){
   newPos = rightEncoder.read();
   if (newPos != rightData.pos) {
     rightData.rate = ((double) 1000000.0 * (newPos - rightData.pos)) / ((double) (micros() - rightData.lastRead));
+    Serial.print("Right: ");
+    Serial.print(leftData.pos);
+    Serial.print(" Rate: ");
+    Serial.println(leftData.rate);
     rightData.pos = newPos;
     rightData.lastRead = micros();
   }
@@ -116,13 +127,20 @@ void loop(){
     }
   }
   writeLongs(0x611, rightData.pos, rightData.rate);
-  
+
+  ledTheatreStage = (ledTheatreStage + rightData.rate / ledTheatreSpeedScale) & 0x03;
+
   delay(10);
 }
 
-void colorFull(uint32_t color) {
+void colorTheatre(uint32_t color) {
   for (uint32_t i = 0; i < ledStrip.numPixels(); i++) {
-    ledStrip.setPixelColor(i, color);
+    if ((i + ledTheatreStage) % ledTheatreWidth == 0) {
+      ledStrip.setPixelColor(i, color);
+    }
+    else {
+      ledStrip.setPixelColor(i, 0);
+    }
   }
   ledStrip.show();
 }
@@ -130,11 +148,11 @@ void colorFull(uint32_t color) {
 void changeLEDs(byte* msg) {
   ledMatchState = msg[2];
   ledTeamColor = msg[0];
-  
-  Serial.print(" Mode: ");
-  Serial.print(ledMatchState);
-  Serial.print(" Color: ");
-  Serial.println(ledTeamColor);
+
+  /*Serial.print(" Mode: ");
+    Serial.print(ledMatchState);
+    Serial.print(" Color: ");
+    Serial.println(ledTeamColor);*/
 }
 
 void rainbow(uint8_t wait) {
@@ -150,10 +168,10 @@ void rainbow(uint8_t wait) {
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
-  if(WheelPos < 85) {
+  if (WheelPos < 85) {
     return ledStrip.Color(255 - WheelPos * 3, 0, WheelPos * 3);
   }
-  if(WheelPos < 170) {
+  if (WheelPos < 170) {
     WheelPos -= 85;
     return ledStrip.Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
