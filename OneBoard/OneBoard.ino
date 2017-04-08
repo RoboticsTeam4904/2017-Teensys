@@ -14,8 +14,9 @@ Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(87, LED_STRIP_PIN, NEO_GRB + NEO_
 int ledTeamColor;
 int ledMatchState;
 int ledTheatreStage;
+int ledEncoderCount;
 const int ledTheatreWidth = 3;
-const int ledTheatreSpeedScale = 2048;
+const int ledTheatreSpeedScale = 32768;
 
 struct encoderData {
   long lastRead;
@@ -117,7 +118,7 @@ void loop() {
     Serial.print("Right: ");
     Serial.print(leftData.pos);
     Serial.print(" Rate: ");
-    Serial.println(leftData.rate);
+    Serial.println(rightData.rate);
     rightData.pos = newPos;
     rightData.lastRead = micros();
   }
@@ -128,7 +129,12 @@ void loop() {
   }
   writeLongs(0x611, rightData.pos, rightData.rate);
 
-  ledTheatreStage = (ledTheatreStage + rightData.rate / ledTheatreSpeedScale) & 0x03;
+  ledEncoderCount += rightData.rate;
+  Serial.println(ledEncoderCount);
+  if (ledEncoderCount > ledTheatreSpeedScale || ledEncoderCount < -ledTheatreSpeedScale) {
+    ledTheatreStage = (ledTheatreStage + 1) & 0x03;
+    ledEncoderCount = 0;
+  }
 
   delay(10);
 }
