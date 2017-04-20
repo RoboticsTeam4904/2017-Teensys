@@ -24,6 +24,8 @@ Encoder leftEncoder(7, 8);
 encoderData leftData;
 Encoder rightEncoder(9, 10);
 encoderData rightData;
+Encoder flywheelEncoder(9, 10);
+encoderData flywheelData;
 
 void resetLeftEncoder(byte * msg) {
   if (msg[0] == 0x72 && msg[1] == 0x65 && msg[2] == 0x73 && msg[3] == 0x65 && msg[4] == 0x74 && msg[5] == 0x65 && msg[6] == 0x6e && msg[7] == 0x63) {
@@ -43,6 +45,15 @@ void resetRightEncoder(byte * msg) {
   }
 }
 
+void resetFlywheelEncoder(byte * msg) {
+  if (msg[0] == 0x72 && msg[1] == 0x65 && msg[2] == 0x73 && msg[3] == 0x65 && msg[4] == 0x74 && msg[5] == 0x65 && msg[6] == 0x6e && msg[7] == 0x63) {
+    flywheelEncoder.write(0);
+    flywheelData.pos = 0;
+    flywheelData.rate = 0;
+    Serial.println("reset");
+  }
+}
+
 void setup(){
   Serial.begin(9600); // Begin debugging serial
   ledStrip.begin();
@@ -58,6 +69,10 @@ void setup(){
   rightData.pos = -999;
   rightData.rate = 0;
   CAN_add_id(0x611, &resetRightEncoder);
+  flywheelData.lastRead = 0;
+  flywheelData.pos = -999;
+  flywheelData.rate = 0;
+  CAN_add_id(0x612, &resetFlywheelEncoder);
   pinMode(POWER_LED_PIN, OUTPUT);
   digitalWrite(POWER_LED_PIN, HIGH);
   delay(1000);
@@ -104,6 +119,7 @@ void loop(){
     }
   }
   writeLongs(0x610, leftData.pos, leftData.rate);
+  
   newPos = rightEncoder.read();
   if (newPos != rightData.pos) {
     rightData.rate = ((double) 1000000.0 * (newPos - rightData.pos)) / ((double) (micros() - rightData.lastRead));
@@ -116,6 +132,19 @@ void loop(){
     }
   }
   writeLongs(0x611, rightData.pos, rightData.rate);
+  
+  newPos = flywheelEncoder.read();
+  if (newPos != flywheelData.pos) {
+    flywheelData.rate = ((double) 1000000.0 * (newPos - flywheelData.pos)) / ((double) (micros() - flywheelData.lastRead));
+    flywheelData.pos = newPos;
+    flywheelData.lastRead = micros();
+  }
+  else {
+    if ((micros() - flywheelData.lastRead) > 1000) {
+      flywheelData.rate = 0;
+    }
+  }
+  writeLongs(0x612, flywheelData.pos, flywheelData.rate);
   
   delay(10);
 }
