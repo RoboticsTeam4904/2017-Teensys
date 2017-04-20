@@ -9,14 +9,15 @@
 #define LED_STRIP_PIN 0
 #define POWER_LED_PIN 25
 
-Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(87, LED_STRIP_PIN, NEO_GRB + NEO_KHZ800);
+const int numberLeds = 87;
+
+Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(numberLeds, LED_STRIP_PIN, NEO_GRB + NEO_KHZ800);
 
 int ledTeamColor;
 int ledMatchState;
-int ledTheatreStage;
-int ledEncoderCount;
-const int ledTheatreWidth = 3;
-const int ledTheatreSpeedScale = 32768;
+float ledWaveDistance;
+const float ledWaveWidth = 1.5f;
+const float ledWaveSpeedScale = 32768.0f; // Relative to encoder ticks
 
 struct encoderData {
   long lastRead;
@@ -28,6 +29,8 @@ Encoder leftEncoder(7, 8);
 encoderData leftData;
 Encoder rightEncoder(9, 10);
 encoderData rightData;
+Encoder flywheelEncoder(11, 12);
+encoderData flywheelData;
 
 void resetLeftEncoder(byte * msg) {
   if (msg[0] == 0x72 && msg[1] == 0x65 && msg[2] == 0x73 && msg[3] == 0x65 && msg[4] == 0x74 && msg[5] == 0x65 && msg[6] == 0x6e && msg[7] == 0x63) {
@@ -47,13 +50,22 @@ void resetRightEncoder(byte * msg) {
   }
 }
 
-void setup() {
+void resetFlywheelEncoder(byte * msg) {
+  if (msg[0] == 0x72 && msg[1] == 0x65 && msg[2] == 0x73 && msg[3] == 0x65 && msg[4] == 0x74 && msg[5] == 0x65 && msg[6] == 0x6e && msg[7] == 0x63) {
+    flywheelEncoder.write(0);
+    flywheelData.pos = 0;
+    flywheelData.rate = 0;
+    Serial.println("reset");
+  }
+}
+
+void setup(){
   Serial.begin(9600); // Begin debugging serial
   ledStrip.begin();
   CAN_begin();
   ledTeamColor = 1; // default to blue
   ledMatchState = 0; // default to disabled
-  ledTheatreStage = 0;
+  ledWaveDistance = 0;
   CAN_add_id(0x600, &changeLEDs); // MatchInformer callback
   leftData.lastRead = 0;
   leftData.pos = -999;
@@ -63,6 +75,10 @@ void setup() {
   rightData.pos = -999;
   rightData.rate = 0;
   CAN_add_id(0x611, &resetRightEncoder);
+  flywheelData.lastRead = 0;
+  flywheelData.pos = -999;
+  flywheelData.rate = 0;
+  CAN_add_id(0x612, &resetFlywheelEncoder);
   pinMode(POWER_LED_PIN, OUTPUT);
   digitalWrite(POWER_LED_PIN, HIGH);
   delay(1000);
@@ -92,7 +108,7 @@ void loop() {
     rainbow(10);
   }
   else {
-    colorTheatre(ledStrip.Color(255 - ledTeamColor * 255, 0, ledTeamColor * 255));
+    colorWave(255 - ledTeamColor * 255, 0, ledTeamColor * 255);
   }
 
   // Encoder code
@@ -112,6 +128,7 @@ void loop() {
     }
   }
   writeLongs(0x610, leftData.pos, leftData.rate);
+  
   newPos = rightEncoder.read();
   if (newPos != rightData.pos) {
     rightData.rate = ((double) 1000000.0 * (newPos - rightData.pos)) / ((double) (micros() - rightData.lastRead));
@@ -129,24 +146,32 @@ void loop() {
   }
   writeLongs(0x611, rightData.pos, rightData.rate);
 
-  ledEncoderCount += rightData.rate;
-  Serial.println(ledEncoderCount);
-  if (ledEncoderCount > ledTheatreSpeedScale || ledEncoderCount < -ledTheatreSpeedScale) {
-    ledTheatreStage = (ledTheatreStage + 1) & 0x03;
-    ledEncoderCount = 0;
+  ledWaveDistance += (float) rightData.rate / ledWaveSpeedScale;
+  if(ledWaveDistance > numberLeds){
+    ledWaveDistance -= numberLeds;
   }
-
+  
+  newPos = flywheelEncoder.read();
+  if (newPos != flywheelData.pos) {
+    flywheelData.rate = ((double) 1000000.0 * (newPos - flywheelData.pos)) / ((double) (micros() - flywheelData.lastRead));
+    flywheelData.pos = newPos;
+    flywheelData.lastRead = micros();
+    Serial.println(flywheelData.pos);
+  }
+  else {
+    if ((micros() - flywheelData.lastRead) > 1000) {
+      flywheelData.rate = 0;
+    }
+  }
+  writeLongs(0x612, flywheelData.pos, flywheelData.rate);
+  
   delay(10);
 }
 
-void colorTheatre(uint32_t color) {
+void colorWave(int R, int G, int B) {
   for (uint32_t i = 0; i < ledStrip.numPixels(); i++) {
-    if ((i + ledTheatreStage) % ledTheatreWidth == 0) {
-      ledStrip.setPixelColor(i, color);
-    }
-    else {
-      ledStrip.setPixelColor(i, 0);
-    }
+    float colorScale = sin(ledWaveDistance + i*ledWaveWidth);
+    ledStrip.setPixelColor(i, ledStrip.Color(R * colorScale + 128, G * colorScale + 128, B * colorScale + 128));
   }
   ledStrip.show();
 }
