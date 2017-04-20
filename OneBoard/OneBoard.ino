@@ -24,7 +24,7 @@ Encoder leftEncoder(7, 8);
 encoderData leftData;
 Encoder rightEncoder(9, 10);
 encoderData rightData;
-Encoder flywheelEncoder(9, 10);
+Encoder flywheelEncoder(11, 12);
 encoderData flywheelData;
 
 void resetLeftEncoder(byte * msg) {
@@ -138,6 +138,7 @@ void loop(){
     flywheelData.rate = ((double) 1000000.0 * (newPos - flywheelData.pos)) / ((double) (micros() - flywheelData.lastRead));
     flywheelData.pos = newPos;
     flywheelData.lastRead = micros();
+    Serial.println(flywheelData.pos);
   }
   else {
     if ((micros() - flywheelData.lastRead) > 1000) {
