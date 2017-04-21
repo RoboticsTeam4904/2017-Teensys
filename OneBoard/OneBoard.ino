@@ -9,13 +9,15 @@
 #define LED_STRIP_PIN 0
 #define POWER_LED_PIN 25
 
-const int numberLeds = 87;
+const int rightLeds = 44;
+const int leftLeds = 43;
 
-Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(numberLeds, LED_STRIP_PIN, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(rightLeds + leftLeds, LED_STRIP_PIN, NEO_GRB + NEO_KHZ800);
 
 int ledTeamColor;
 int ledMatchState;
-float ledWaveDistance;
+float ledWaveDistanceRight;
+float ledWaveDistanceLeft;
 const float ledWaveWidth = 3.0f;
 const float ledWaveSpeedScale = 32768.0f; // Relative to encoder ticks
 
@@ -65,7 +67,8 @@ void setup(){
   CAN_begin();
   ledTeamColor = 1; // default to blue
   ledMatchState = 0; // default to disabled
-  ledWaveDistance = 0;
+  ledWaveDistanceRight = 0;
+  ledWaveDistanceLeft = 0;
   CAN_add_id(0x600, &changeLEDs); // MatchInformer callback
   leftData.lastRead = 0;
   leftData.pos = -999;
@@ -104,12 +107,12 @@ void loop() {
   CAN_update();
 
   // LED strip code
-  if (ledMatchState == 0) {
-    rainbow(10);
-  }
-  else {
+  //if (ledMatchState == 0) {
+  //  rainbow(10);
+  //}
+  //else {
     colorWave(255 - ledTeamColor * 255, 0, ledTeamColor * 255);
-  }
+  //}
 
   // Encoder code
   long newPos = leftEncoder.read();
@@ -124,6 +127,12 @@ void loop() {
     }
   }
   writeLongs(0x610, leftData.pos, leftData.rate);
+
+  ledWaveDistanceLeft += (float) leftData.rate / ledWaveSpeedScale;
+  ledWaveDistanceLeft = fmod(ledWaveDistanceLeft, (float) leftLeds);
+
+  Serial.print("LEFT: ");
+  Serial.println(ledWaveDistanceLeft);
   
   newPos = rightEncoder.read();
   if (newPos != rightData.pos) {
@@ -138,10 +147,11 @@ void loop() {
   }
   writeLongs(0x611, rightData.pos, rightData.rate);
 
-  ledWaveDistance += (float) rightData.rate / ledWaveSpeedScale;
-  if(ledWaveDistance > numberLeds){
-    ledWaveDistance -= numberLeds;
-  }
+  ledWaveDistanceRight += (float) rightData.rate / ledWaveSpeedScale;
+  ledWaveDistanceRight = fmod(ledWaveDistanceRight, (float) rightLeds);
+
+  Serial.print("RIGHT: ");
+  Serial.println(ledWaveDistanceRight);
   
   newPos = flywheelEncoder.read();
   if (newPos != flywheelData.pos) {
@@ -160,8 +170,12 @@ void loop() {
 }
 
 void colorWave(int R, int G, int B) {
-  for (uint32_t i = 0; i < ledStrip.numPixels(); i++) {
-    float colorScale = sin(ledWaveDistance + i*ledWaveWidth);
+  for(int i = 0; i < leftLeds; i++){
+    float colorScale = sin(ledWaveDistanceLeft + i*ledWaveWidth);
+    ledStrip.setPixelColor(i, ledStrip.Color(R * colorScale, G * colorScale, B * colorScale));
+  }
+  for(int i = leftLeds; i < leftLeds + rightLeds; i++){
+    float colorScale = sin(-ledWaveDistanceRight + i*ledWaveWidth);
     ledStrip.setPixelColor(i, ledStrip.Color(R * colorScale, G * colorScale, B * colorScale));
   }
   ledStrip.show();
