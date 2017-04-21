@@ -18,8 +18,8 @@ int ledTeamColor;
 int ledMatchState;
 float ledWaveDistanceRight;
 float ledWaveDistanceLeft;
-const float ledWaveWidth = 3.0f;
-const float ledWaveSpeedScale = 32768.0f; // Relative to encoder ticks
+const float ledWaveFrequency = 0.25f;
+const float ledWaveSpeedScale = 16384.0f; // Relative to encoder ticks
 
 struct encoderData {
   long lastRead;
@@ -107,12 +107,12 @@ void loop() {
   CAN_update();
 
   // LED strip code
-  //if (ledMatchState == 0) {
-  //  rainbow(10);
-  //}
-  //else {
+  if (ledMatchState == 0) {
+    rainbow(10);
+  }
+  else {
     colorWave(255 - ledTeamColor * 255, 0, ledTeamColor * 255);
-  //}
+  }
 
   // Encoder code
   long newPos = leftEncoder.read();
@@ -171,11 +171,11 @@ void loop() {
 
 void colorWave(int R, int G, int B) {
   for(int i = 0; i < leftLeds; i++){
-    float colorScale = sin(ledWaveDistanceLeft + i*ledWaveWidth);
+    float colorScale = sin(ledWaveDistanceLeft + i*ledWaveFrequency) * 1.0f;
     ledStrip.setPixelColor(i, ledStrip.Color(R * colorScale, G * colorScale, B * colorScale));
   }
   for(int i = leftLeds; i < leftLeds + rightLeds; i++){
-    float colorScale = sin(-ledWaveDistanceRight + i*ledWaveWidth);
+    float colorScale = sin(-ledWaveDistanceRight + i*ledWaveFrequency) * 1.0f;
     ledStrip.setPixelColor(i, ledStrip.Color(R * colorScale, G * colorScale, B * colorScale));
   }
   ledStrip.show();
