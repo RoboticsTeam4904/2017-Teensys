@@ -115,10 +115,6 @@ void loop() {
   long newPos = leftEncoder.read();
   if (newPos != leftData.pos) {
     leftData.rate = ((double) 1000000.0 * (newPos - leftData.pos)) / ((double) (micros() - leftData.lastRead));
-    Serial.print("Left: ");
-    Serial.print(leftData.pos);
-    Serial.print(" Rate: ");
-    Serial.println(leftData.rate);
     leftData.pos = newPos;
     leftData.lastRead = micros();
   }
@@ -132,10 +128,6 @@ void loop() {
   newPos = rightEncoder.read();
   if (newPos != rightData.pos) {
     rightData.rate = ((double) 1000000.0 * (newPos - rightData.pos)) / ((double) (micros() - rightData.lastRead));
-    Serial.print("Right: ");
-    Serial.print(leftData.pos);
-    Serial.print(" Rate: ");
-    Serial.println(rightData.rate);
     rightData.pos = newPos;
     rightData.lastRead = micros();
   }
@@ -156,7 +148,6 @@ void loop() {
     flywheelData.rate = ((double) 1000000.0 * (newPos - flywheelData.pos)) / ((double) (micros() - flywheelData.lastRead));
     flywheelData.pos = newPos;
     flywheelData.lastRead = micros();
-    Serial.println(flywheelData.pos);
   }
   else {
     if ((micros() - flywheelData.lastRead) > 1000) {
