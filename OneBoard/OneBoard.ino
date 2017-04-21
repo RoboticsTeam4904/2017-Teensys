@@ -16,7 +16,7 @@ Adafruit_NeoPixel ledStrip = Adafruit_NeoPixel(numberLeds, LED_STRIP_PIN, NEO_GR
 int ledTeamColor;
 int ledMatchState;
 float ledWaveDistance;
-const float ledWaveWidth = 1.5f;
+const float ledWaveWidth = 3.0f;
 const float ledWaveSpeedScale = 32768.0f; // Relative to encoder ticks
 
 struct encoderData {
@@ -162,7 +162,7 @@ void loop() {
 void colorWave(int R, int G, int B) {
   for (uint32_t i = 0; i < ledStrip.numPixels(); i++) {
     float colorScale = sin(ledWaveDistance + i*ledWaveWidth);
-    ledStrip.setPixelColor(i, ledStrip.Color(R * colorScale + 128, G * colorScale + 128, B * colorScale + 128));
+    ledStrip.setPixelColor(i, ledStrip.Color(R * colorScale, G * colorScale, B * colorScale));
   }
   ledStrip.show();
 }
